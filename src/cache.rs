@@ -41,8 +41,9 @@ pub fn ensure_binary(
     let binary_dir = binary_path.parent().unwrap();
 
     if is_archive(url) {
-        let archive_dir = binary_dir;
+        let archive_dir = binary_path.parent().unwrap().parent().unwrap();
         fs::create_dir_all(archive_dir)?;
+        debug!("Archive binary path: {:?}", binary_path);
 
         if !binary_path.exists() || force {
             debug!("Downloading and extracting {}", url);
