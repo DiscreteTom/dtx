@@ -1,0 +1,131 @@
+use log::debug;
+use sha2::{Digest, Sha256};
+use std::fs;
+use std::path::PathBuf;
+
+pub fn get_binary_path(
+    url: &str,
+    name: &str,
+    entry: Option<&str>,
+) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    let cache_dir = dirs::home_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join(".dtx/cache");
+
+    let url_hash = format!("{:x}", Sha256::digest(url.as_bytes()))[..8].to_string();
+    let base_dir = cache_dir.join(name).join(&url_hash);
+
+    if is_archive(url) {
+        if let Some(entry_path) = entry {
+            Ok(base_dir.join(entry_path))
+        } else {
+            Err("Archive URL requires --entry parameter".into())
+        }
+    } else {
+        let executable_name = if cfg!(windows) {
+            format!("{}.exe", name)
+        } else {
+            name.to_string()
+        };
+        Ok(base_dir.join(executable_name))
+    }
+}
+
+fn is_archive(url: &str) -> bool {
+    let url_lower = url.to_lowercase();
+    url_lower.ends_with(".zip") || url_lower.ends_with(".tar.gz") || url_lower.ends_with(".tgz")
+}
+
+pub fn ensure_binary(
+    url: &str,
+    binary_path: &PathBuf,
+    force: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let binary_dir = binary_path.parent().unwrap();
+
+    if is_archive(url) {
+        let archive_dir = binary_dir;
+        fs::create_dir_all(archive_dir)?;
+
+        if !binary_path.exists() || force {
+            debug!("Downloading and extracting {}", url);
+            let response = reqwest::blocking::get(url)?;
+            let bytes = response.bytes()?;
+
+            if url.to_lowercase().ends_with(".zip") {
+                extract_zip(&bytes, archive_dir)?;
+            } else if url.to_lowercase().ends_with(".tar.gz")
+                || url.to_lowercase().ends_with(".tgz")
+            {
+                extract_tar_gz(&bytes, archive_dir)?;
+            }
+
+            debug!("Extracted archive");
+
+            #[cfg(unix)]
+            if binary_path.exists() {
+                use std::os::unix::fs::PermissionsExt;
+                fs::set_permissions(binary_path, fs::Permissions::from_mode(0o755))?;
+                debug!("Set executable permissions");
+            }
+        } else {
+            debug!("Using cached archive");
+        }
+    } else {
+        fs::create_dir_all(binary_dir)?;
+        debug!("Binary path: {:?}", binary_path);
+
+        if !binary_path.exists() || force {
+            debug!("Downloading {}", url);
+            let response = reqwest::blocking::get(url)?;
+            fs::write(binary_path, response.bytes()?)?;
+            debug!("Downloaded and cached binary");
+
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                fs::set_permissions(binary_path, fs::Permissions::from_mode(0o755))?;
+                debug!("Set executable permissions");
+            }
+        } else {
+            debug!("Using cached binary");
+        }
+    }
+
+    Ok(())
+}
+
+fn extract_zip(
+    bytes: &[u8],
+    target_dir: &std::path::Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cursor = std::io::Cursor::new(bytes);
+    let mut archive = zip::ZipArchive::new(cursor)?;
+
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)?;
+        let outpath = target_dir.join(file.name());
+
+        if file.is_dir() {
+            fs::create_dir_all(&outpath)?;
+        } else {
+            if let Some(p) = outpath.parent() {
+                fs::create_dir_all(p)?;
+            }
+            let mut outfile = fs::File::create(&outpath)?;
+            std::io::copy(&mut file, &mut outfile)?;
+        }
+    }
+    Ok(())
+}
+
+fn extract_tar_gz(
+    bytes: &[u8],
+    target_dir: &std::path::Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let cursor = std::io::Cursor::new(bytes);
+    let tar = flate2::read::GzDecoder::new(cursor);
+    let mut archive = tar::Archive::new(tar);
+    archive.unpack(target_dir)?;
+    Ok(())
+}
