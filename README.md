@@ -68,4 +68,10 @@ dtx https://example.com/tool.tar.gz --entry tool/bin/tool -- --version
 
 ## Cache
 
-Binaries are cached in `~/.dtx/cache/<name>/<url-hash>/` to avoid re-downloading.
+By default, binaries are cached in `~/.dtx/cache/<name>/<url-hash>/` to avoid re-downloading.
+
+Set the `DTX_CACHE_DIR` environment variable to use a custom cache location:
+
+```bash
+export DTX_CACHE_DIR=/tmp/.dtx/cache
+```
