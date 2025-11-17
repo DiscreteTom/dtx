@@ -24,10 +24,11 @@ Arguments:
   [APP_ARGS]...  Arguments to pass to the executed binary
 
 Options:
-  -n, --name <NAME>    Custom name for the binary (defaults to filename from URL)
-  -e, --entry <ENTRY>  Entry binary path within archive (for zip/tar.gz files)
-  -f, --force          Force refresh cache, re-download even if cached
-  -h, --help           Print help
+  -n, --name <NAME>            Custom name for the binary (defaults to filename from URL)
+  -e, --entry <ENTRY>          Entry binary path within archive (for zip/tar.gz files)
+  -f, --force                  Force refresh cache, re-download even if cached
+      --cache-dir <CACHE_DIR>  Cache directory path [env: DTX_CACHE_DIR=] [default: ~/.dtx/cache]
+  -h, --help                   Print help
 ```
 
 </details>

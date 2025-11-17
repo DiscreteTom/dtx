@@ -3,6 +3,7 @@ mod executor;
 mod utils;
 
 use clap::Parser;
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(name = "dtx")]
@@ -19,6 +20,9 @@ struct Args {
     /// Force refresh cache, re-download even if cached
     #[arg(short, long)]
     force: bool,
+    /// Cache directory path
+    #[arg(long, env = "DTX_CACHE_DIR", default_value = "~/.dtx/cache")]
+    cache_dir: PathBuf,
     /// Arguments to pass to the executed binary
     #[arg(last = true)]
     app_args: Vec<String>,
@@ -36,7 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         utils::extract_binary_name_from_url(&args.url)
     };
 
-    let binary_path = cache::get_binary_path(&args.url, binary_name, args.entry.as_deref())?;
+    let binary_path = cache::get_binary_path(&args.url, binary_name, args.entry.as_deref(), &args.cache_dir)?;
 
     cache::ensure_binary(&args.url, &binary_path, args.force)?;
 

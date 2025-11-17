@@ -7,15 +7,8 @@ pub fn get_binary_path(
     url: &str,
     name: &str,
     entry: Option<&str>,
+    cache_dir: &std::path::Path,
 ) -> Result<PathBuf, Box<dyn std::error::Error>> {
-    let cache_dir = std::env::var("DTX_CACHE_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| {
-            dirs::home_dir()
-                .unwrap_or_else(|| PathBuf::from("."))
-                .join(".dtx/cache")
-        });
-
     let url_hash = format!("{:x}", Sha256::digest(url.as_bytes()))[..8].to_string();
     let base_dir = cache_dir.join(name).join(&url_hash);
 
@@ -150,20 +143,23 @@ mod tests {
 
     #[test]
     fn test_get_binary_path_regular() {
-        let path = get_binary_path("https://example.com/tool", "mytool", None).unwrap();
+        use std::path::Path;
+        let path = get_binary_path("https://example.com/tool", "mytool", None, Path::new("~/.dtx/cache")).unwrap();
         assert!(path.to_string_lossy().contains("mytool"));
         assert!(path.to_string_lossy().contains(".dtx/cache"));
     }
 
     #[test]
     fn test_get_binary_path_archive_with_entry() {
-        let path = get_binary_path("https://example.com/tool.zip", "mytool", Some("bin/app")).unwrap();
+        use std::path::Path;
+        let path = get_binary_path("https://example.com/tool.zip", "mytool", Some("bin/app"), Path::new("~/.dtx/cache")).unwrap();
         assert!(path.to_string_lossy().ends_with("bin/app"));
     }
 
     #[test]
     fn test_get_binary_path_archive_without_entry() {
-        let result = get_binary_path("https://example.com/tool.zip", "mytool", None);
+        use std::path::Path;
+        let result = get_binary_path("https://example.com/tool.zip", "mytool", None, Path::new("~/.dtx/cache"));
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Archive URL requires --entry parameter"));
     }
@@ -180,10 +176,9 @@ mod tests {
 
     #[test]
     fn test_custom_cache_dir() {
-        use std::env;
-        env::set_var("DTX_CACHE_DIR", "/tmp/custom_dtx");
-        let path = get_binary_path("https://example.com/tool", "mytool", None).unwrap();
+        use std::path::Path;
+        let custom_cache = Path::new("/tmp/custom_dtx");
+        let path = get_binary_path("https://example.com/tool", "mytool", None, custom_cache).unwrap();
         assert!(path.to_string_lossy().contains("/tmp/custom_dtx"));
-        env::remove_var("DTX_CACHE_DIR");
     }
 }
