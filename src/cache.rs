@@ -8,9 +8,13 @@ pub fn get_binary_path(
     name: &str,
     entry: Option<&str>,
 ) -> Result<PathBuf, Box<dyn std::error::Error>> {
-    let cache_dir = dirs::home_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join(".dtx/cache");
+    let cache_dir = std::env::var("DTX_CACHE_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| {
+            dirs::home_dir()
+                .unwrap_or_else(|| PathBuf::from("."))
+                .join(".dtx/cache")
+        });
 
     let url_hash = format!("{:x}", Sha256::digest(url.as_bytes()))[..8].to_string();
     let base_dir = cache_dir.join(name).join(&url_hash);
@@ -172,5 +176,14 @@ mod tests {
         
         let result = ensure_binary("invalid://url", &binary_path, false);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_custom_cache_dir() {
+        use std::env;
+        env::set_var("DTX_CACHE_DIR", "/tmp/custom_dtx");
+        let path = get_binary_path("https://example.com/tool", "mytool", None).unwrap();
+        assert!(path.to_string_lossy().contains("/tmp/custom_dtx"));
+        env::remove_var("DTX_CACHE_DIR");
     }
 }
