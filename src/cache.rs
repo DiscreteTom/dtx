@@ -129,3 +129,48 @@ fn extract_tar_gz(
     archive.unpack(target_dir)?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_archive() {
+        assert!(is_archive("test.zip"));
+        assert!(is_archive("test.tar.gz"));
+        assert!(is_archive("test.tgz"));
+        assert!(is_archive("TEST.ZIP"));
+        assert!(!is_archive("test.exe"));
+        assert!(!is_archive("test"));
+    }
+
+    #[test]
+    fn test_get_binary_path_regular() {
+        let path = get_binary_path("https://example.com/tool", "mytool", None).unwrap();
+        assert!(path.to_string_lossy().contains("mytool"));
+        assert!(path.to_string_lossy().contains(".dtx/cache"));
+    }
+
+    #[test]
+    fn test_get_binary_path_archive_with_entry() {
+        let path = get_binary_path("https://example.com/tool.zip", "mytool", Some("bin/app")).unwrap();
+        assert!(path.to_string_lossy().ends_with("bin/app"));
+    }
+
+    #[test]
+    fn test_get_binary_path_archive_without_entry() {
+        let result = get_binary_path("https://example.com/tool.zip", "mytool", None);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Archive URL requires --entry parameter"));
+    }
+
+    #[test]
+    fn test_ensure_binary_invalid_url() {
+        use std::env;
+        let temp_dir = env::temp_dir().join("dtx_test");
+        let binary_path = temp_dir.join("test_binary");
+        
+        let result = ensure_binary("invalid://url", &binary_path, false);
+        assert!(result.is_err());
+    }
+}
