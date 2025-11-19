@@ -7,6 +7,7 @@ INSTALL_DIR="${DTX_INSTALL_DIR:-$HOME/.local/bin}"
 detect_platform() {
     OS=$(uname -s | tr '[:upper:]' '[:lower:]')
     ARCH=$(uname -m)
+    LIBC=""
     
     case "$ARCH" in
         x86_64|amd64) ARCH="x86_64" ;;
@@ -15,7 +16,12 @@ detect_platform() {
     esac
     
     case "$OS" in
-        linux) OS="linux" ;;
+        linux)
+            OS="linux"
+            if ! command -v gcc >/dev/null 2>&1; then
+                LIBC="-musl"
+            fi
+            ;;
         darwin) OS="macos" ;;
         *) echo "Unsupported OS: $OS"; exit 1 ;;
     esac
@@ -29,7 +35,7 @@ main() {
     detect_platform
     VERSION="${DTX_VERSION:-$(get_latest_release)}"
     
-    ARCHIVE="dtx-${OS}-${ARCH}.tar.gz"
+    ARCHIVE="dtx-${OS}-${ARCH}${LIBC}.tar.gz"
     URL="https://github.com/$REPO/releases/download/$VERSION/$ARCHIVE"
     
     echo "Installing dtx $VERSION for $OS-$ARCH..."
