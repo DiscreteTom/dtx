@@ -47,7 +47,7 @@ main() {
     ARCHIVE="dtx-${OS}-${ARCH}${LIBC}.tar.gz"
     URL="https://github.com/$REPO/releases/download/$VERSION/$ARCHIVE"
     
-    echo "Installing dtx $VERSION for $OS-$ARCH..."
+    echo "Installing dtx $VERSION for $OS-$ARCH$LIBC..."
     
     mkdir -p "$INSTALL_DIR"
     curl -LsSf "$URL" | tar xz -C "$INSTALL_DIR"
