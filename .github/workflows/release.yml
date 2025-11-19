@@ -95,13 +95,17 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+      
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
       
       - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: artifacts/**/*
-          draft: false
-          prerelease: false
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create ${{ github.ref_name }} \
+            --title "${{ github.ref_name }}" \
+            --notes "See [CHANGELOG.md](https://github.com/DiscreteTom/dtx/blob/main/CHANGELOG.md)" \
+            artifacts/**/*
