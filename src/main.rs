@@ -50,9 +50,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         utils::extract_binary_name_from_url(&args.url)
     };
 
-    let (binary_path, base_dir) = cache::get_binary_path(&args.url, binary_name, args.entry.as_deref(), &cache_dir)?;
+    let (binary_path, base_dir, entry_path) = cache::get_binary_path(&args.url, binary_name, args.entry.as_deref(), &cache_dir)?;
 
-    cache::ensure_binary(&args.url, &binary_path, &base_dir, args.force)?;
+    cache::ensure_binary(&args.url, &binary_path, &base_dir, entry_path, args.force)?;
 
     let exit_code = executor::execute_binary(&binary_path, &args.app_args)?;
     std::process::exit(exit_code);

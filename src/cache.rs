@@ -8,13 +8,18 @@ pub fn get_binary_path(
     name: &str,
     entry: Option<&str>,
     cache_dir: &std::path::Path,
-) -> Result<(PathBuf, PathBuf), Box<dyn std::error::Error>> {
+) -> Result<(PathBuf, PathBuf, Option<String>), Box<dyn std::error::Error>> {
     let url_hash = format!("{:x}", Sha256::digest(url.as_bytes()))[..8].to_string();
     let base_dir = cache_dir.join(name).join(&url_hash);
 
     if is_archive(url) {
         if let Some(entry_path) = entry {
-            Ok((base_dir.join(entry_path), base_dir))
+            let executable_name = if cfg!(windows) {
+                format!("{}.exe", name)
+            } else {
+                name.to_string()
+            };
+            Ok((base_dir.join(&executable_name), base_dir, Some(entry_path.to_string())))
         } else {
             Err("Archive URL requires --entry parameter".into())
         }
@@ -24,7 +29,7 @@ pub fn get_binary_path(
         } else {
             name.to_string()
         };
-        Ok((base_dir.join(executable_name), base_dir))
+        Ok((base_dir.join(executable_name), base_dir, None))
     }
 }
 
@@ -37,6 +42,7 @@ pub fn ensure_binary(
     url: &str,
     binary_path: &PathBuf,
     base_dir: &PathBuf,
+    entry_path: Option<String>,
     force: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if is_archive(url) {
@@ -57,6 +63,15 @@ pub fn ensure_binary(
             }
 
             debug!("Extracted archive");
+
+            // Rename extracted binary to match custom name
+            if let Some(entry) = entry_path {
+                let extracted_path = base_dir.join(&entry);
+                if extracted_path != *binary_path {
+                    fs::rename(&extracted_path, binary_path)?;
+                    debug!("Renamed {:?} to {:?}", extracted_path, binary_path);
+                }
+            }
 
             #[cfg(unix)]
             if binary_path.exists() {
@@ -151,17 +166,19 @@ mod tests {
     #[test]
     fn test_get_binary_path_regular() {
         use std::path::Path;
-        let (path, _) = get_binary_path("https://example.com/tool", "mytool", None, Path::new("~/.dtx/cache")).unwrap();
+        let (path, _, entry) = get_binary_path("https://example.com/tool", "mytool", None, Path::new("~/.dtx/cache")).unwrap();
         assert!(path.to_string_lossy().contains("mytool"));
         assert!(path.to_string_lossy().contains(".dtx/cache"));
+        assert!(entry.is_none());
     }
 
     #[test]
     fn test_get_binary_path_archive_with_entry() {
         use std::path::Path;
-        let (path, base) = get_binary_path("https://example.com/tool.zip", "mytool", Some("bin/app"), Path::new("~/.dtx/cache")).unwrap();
-        assert!(path.to_string_lossy().ends_with("bin/app"));
+        let (path, base, entry) = get_binary_path("https://example.com/tool.zip", "mytool", Some("bin/app"), Path::new("~/.dtx/cache")).unwrap();
+        assert!(path.to_string_lossy().ends_with("mytool"));
         assert!(base.to_string_lossy().contains("mytool"));
+        assert_eq!(entry, Some("bin/app".to_string()));
     }
 
     #[test]
@@ -178,7 +195,7 @@ mod tests {
         let temp_dir = env::temp_dir().join("dtx_test");
         let binary_path = temp_dir.join("test_binary");
         
-        let result = ensure_binary("invalid://url", &binary_path, &temp_dir, false);
+        let result = ensure_binary("invalid://url", &binary_path, &temp_dir, None, false);
         assert!(result.is_err());
     }
 
@@ -186,7 +203,7 @@ mod tests {
     fn test_custom_cache_dir() {
         use std::path::Path;
         let custom_cache = Path::new("/tmp/custom_dtx");
-        let (path, _) = get_binary_path("https://example.com/tool", "mytool", None, custom_cache).unwrap();
+        let (path, _, _) = get_binary_path("https://example.com/tool", "mytool", None, custom_cache).unwrap();
         assert!(path.to_string_lossy().contains("/tmp/custom_dtx"));
     }
 }
