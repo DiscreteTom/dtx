@@ -24,17 +24,12 @@ set URL_TAR=%URL_DIRECT%.tar.gz
 set URL_NESTED_ZIP=%URL_DIRECT%-nested.zip
 set URL_NESTED_TAR=%URL_DIRECT%-nested.tar.gz
 
-REM Compute URL hashes (first 8 chars of SHA256)
-for /f %%i in ('echo %URL_DIRECT%^| certutil -hashstring -stdin SHA256 ^| findstr /v "hash CertUtil"') do set "HASH_DIRECT=%%i"
-set HASH_DIRECT=%HASH_DIRECT:~0,8%
-for /f %%i in ('echo %URL_ZIP%^| certutil -hashstring -stdin SHA256 ^| findstr /v "hash CertUtil"') do set "HASH_ZIP=%%i"
-set HASH_ZIP=%HASH_ZIP:~0,8%
-for /f %%i in ('echo %URL_TAR%^| certutil -hashstring -stdin SHA256 ^| findstr /v "hash CertUtil"') do set "HASH_TAR=%%i"
-set HASH_TAR=%HASH_TAR:~0,8%
-for /f %%i in ('echo %URL_NESTED_ZIP%^| certutil -hashstring -stdin SHA256 ^| findstr /v "hash CertUtil"') do set "HASH_NESTED_ZIP=%%i"
-set HASH_NESTED_ZIP=%HASH_NESTED_ZIP:~0,8%
-for /f %%i in ('echo %URL_NESTED_TAR%^| certutil -hashstring -stdin SHA256 ^| findstr /v "hash CertUtil"') do set "HASH_NESTED_TAR=%%i"
-set HASH_NESTED_TAR=%HASH_NESTED_TAR:~0,8%
+REM Compute URL hashes (first 8 chars of SHA256) using PowerShell
+for /f %%i in ('powershell -Command "$hash = [System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes('%URL_DIRECT%')); -join ($hash[0..3] | ForEach-Object { $_.ToString('x2') })"') do set "HASH_DIRECT=%%i"
+for /f %%i in ('powershell -Command "$hash = [System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes('%URL_ZIP%')); -join ($hash[0..3] | ForEach-Object { $_.ToString('x2') })"') do set "HASH_ZIP=%%i"
+for /f %%i in ('powershell -Command "$hash = [System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes('%URL_TAR%')); -join ($hash[0..3] | ForEach-Object { $_.ToString('x2') })"') do set "HASH_TAR=%%i"
+for /f %%i in ('powershell -Command "$hash = [System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes('%URL_NESTED_ZIP%')); -join ($hash[0..3] | ForEach-Object { $_.ToString('x2') })"') do set "HASH_NESTED_ZIP=%%i"
+for /f %%i in ('powershell -Command "$hash = [System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes('%URL_NESTED_TAR%')); -join ($hash[0..3] | ForEach-Object { $_.ToString('x2') })"') do set "HASH_NESTED_TAR=%%i"
 
 if exist "%TEMP_CACHE%" rmdir /s /q "%TEMP_CACHE%"
 echo Using temp cache dir: %TEMP_CACHE%
@@ -74,7 +69,7 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 echo Checking cache...
-if not exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\%HASH%\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
+if not exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%\%HASH%\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
     echo ERROR: Binary not found in cache
     exit /b 1
 )
@@ -90,11 +85,11 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 echo Checking cache...
-if not exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\%HASH%\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
+if not exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%\%HASH%\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
     echo ERROR: Binary not found in cache
     exit /b 1
 )
-if exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\%HASH%\dtx-test-fixture-windows-%DTX_ARCH%.exe.zip" (
+if exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%\%HASH%\dtx-test-fixture-windows-%DTX_ARCH%.exe.zip" (
     echo ERROR: Archive file should not be in cache
     exit /b 1
 )
@@ -110,11 +105,11 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 echo Checking cache...
-if not exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\%HASH%\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
+if not exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%\%HASH%\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
     echo ERROR: Binary not found in cache
     exit /b 1
 )
-if exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\%HASH%\dtx-test-fixture-windows-%DTX_ARCH%.exe.tar.gz" (
+if exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%\%HASH%\dtx-test-fixture-windows-%DTX_ARCH%.exe.tar.gz" (
     echo ERROR: Archive file should not be in cache
     exit /b 1
 )
@@ -130,11 +125,11 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 echo Checking cache...
-if not exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\%HASH%\bin\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
+if not exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%\%HASH%\bin\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
     echo ERROR: Binary not found in cache
     exit /b 1
 )
-if exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\%HASH%\dtx-test-fixture-windows-%DTX_ARCH%.exe-nested.zip" (
+if exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%\%HASH%\dtx-test-fixture-windows-%DTX_ARCH%.exe-nested.zip" (
     echo ERROR: Archive file should not be in cache
     exit /b 1
 )
@@ -150,11 +145,11 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 echo Checking cache...
-if not exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\%HASH%\bin\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
+if not exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%\%HASH%\bin\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
     echo ERROR: Binary not found in cache
     exit /b 1
 )
-if exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\%HASH%\dtx-test-fixture-windows-%DTX_ARCH%.exe-nested.tar.gz" (
+if exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%\%HASH%\dtx-test-fixture-windows-%DTX_ARCH%.exe-nested.tar.gz" (
     echo ERROR: Archive file should not be in cache
     exit /b 1
 )
