@@ -1,0 +1,25 @@
+name: Integration Tests
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: dtolnay/rust-toolchain@stable
+      
+      - name: Run Linux integration tests
+        run: bash scripts/integration_test.sh
+
+  test-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: dtolnay/rust-toolchain@stable
+      
+      - name: Run Windows integration tests
+        run: scripts/integration_test.bat
