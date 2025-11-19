@@ -21,16 +21,26 @@ jobs:
             artifact_name: dtx
             asset_name: dtx-linux-x86_64-musl
             test_script: bash scripts/integration_test.sh
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            artifact_name: dtx
+            asset_name: dtx-linux-aarch64
+            test_script: ""
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            artifact_name: dtx
+            asset_name: dtx-linux-aarch64-musl
+            test_script: ""
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             artifact_name: dtx.exe
             asset_name: dtx-windows-x86_64.exe
             test_script: scripts/integration_test.bat
           - os: windows-latest
-            target: x86_64-pc-windows-gnu
+            target: aarch64-pc-windows-msvc
             artifact_name: dtx.exe
-            asset_name: dtx-windows-x86_64-gnu.exe
-            test_script: scripts/integration_test.bat
+            asset_name: dtx-windows-aarch64.exe
+            test_script: ""
 
     steps:
       - uses: actions/checkout@v4
@@ -43,10 +53,17 @@ jobs:
         if: matrix.target == 'x86_64-unknown-linux-musl'
         run: sudo apt-get update && sudo apt-get install -y musl-tools
       
+      - name: Install ARM cross-compilation tools
+        if: contains(matrix.target, 'aarch64') && matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+      
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
       
       - name: Run integration tests
+        if: matrix.test_script != ''
         run: ${{ matrix.test_script }}
         env:
           DTX_BIN: target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
