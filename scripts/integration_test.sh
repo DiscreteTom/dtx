@@ -55,10 +55,12 @@ else
         echo "Testing with debug build: $DTX_BIN"
     else
         echo "Downloading version $VERSION for $ARCH..."
-        curl -L -o dtx "https://github.com/DiscreteTom/dtx/releases/download/$VERSION/dtx-linux-$ARCH"
+        curl -L -o dtx.tar.gz "https://github.com/DiscreteTom/dtx/releases/download/$VERSION/dtx-linux-$ARCH.tar.gz"
+        tar xzf dtx.tar.gz
         chmod +x dtx
         mkdir -p target/debug
         mv dtx target/debug/dtx
+        rm dtx.tar.gz
         DTX_BIN="./target/debug/dtx"
         echo "Testing with downloaded version: $VERSION ($ARCH)"
     fi
