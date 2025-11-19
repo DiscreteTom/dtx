@@ -33,6 +33,10 @@ fn is_archive(url: &str) -> bool {
     url_lower.ends_with(".zip") || url_lower.ends_with(".tar.gz") || url_lower.ends_with(".tgz")
 }
 
+fn get_archive_extraction_dir(binary_path: &PathBuf) -> &std::path::Path {
+    binary_path.parent().unwrap().parent().unwrap()
+}
+
 pub fn ensure_binary(
     url: &str,
     binary_path: &PathBuf,
@@ -41,7 +45,7 @@ pub fn ensure_binary(
     let binary_dir = binary_path.parent().unwrap();
 
     if is_archive(url) {
-        let archive_dir = binary_path.parent().unwrap().parent().unwrap();
+        let archive_dir = get_archive_extraction_dir(binary_path);
         fs::create_dir_all(archive_dir)?;
         debug!("Archive binary path: {:?}", binary_path);
 
@@ -181,5 +185,13 @@ mod tests {
         let custom_cache = Path::new("/tmp/custom_dtx");
         let path = get_binary_path("https://example.com/tool", "mytool", None, custom_cache).unwrap();
         assert!(path.to_string_lossy().contains("/tmp/custom_dtx"));
+    }
+
+    #[test]
+    fn test_get_archive_extraction_dir() {
+        use std::path::PathBuf;
+        let binary_path = PathBuf::from("/cache/tool/hash/archive/binary");
+        let extraction_dir = get_archive_extraction_dir(&binary_path);
+        assert_eq!(extraction_dir, std::path::Path::new("/cache/tool/hash"));
     }
 }
