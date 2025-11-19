@@ -10,9 +10,31 @@ REM   set DTX_ARCH=aarch64 && set DTX_VERSION=v1.0.0 && scripts\integration_test
 
 setlocal enabledelayedexpansion
 
+if "%DTX_VERSION%"=="" set DTX_VERSION=dev
+if "%DTX_ARCH%"=="" set DTX_ARCH=x86_64
+
+set FIXTURE_VERSION=v0.1.2
 set TEMP_CACHE=%TEMP%\dtx_test_cache
 set DTX_CACHE_DIR=%TEMP_CACHE%
-if "%DTX_ARCH%"=="" set DTX_ARCH=x86_64
+
+REM Test fixture URLs
+set URL_DIRECT=https://github.com/DiscreteTom/dtx-test-fixture/releases/download/%FIXTURE_VERSION%/dtx-test-fixture-windows-%DTX_ARCH%.exe
+set URL_ZIP=%URL_DIRECT%.zip
+set URL_TAR=%URL_DIRECT%.tar.gz
+set URL_NESTED_ZIP=%URL_DIRECT%-nested.zip
+set URL_NESTED_TAR=%URL_DIRECT%-nested.tar.gz
+
+REM Compute URL hashes (first 8 chars of SHA256)
+for /f %%i in ('echo %URL_DIRECT%^| certutil -hashstring -stdin SHA256 ^| findstr /v "hash CertUtil"') do set "HASH_DIRECT=%%i"
+set HASH_DIRECT=%HASH_DIRECT:~0,8%
+for /f %%i in ('echo %URL_ZIP%^| certutil -hashstring -stdin SHA256 ^| findstr /v "hash CertUtil"') do set "HASH_ZIP=%%i"
+set HASH_ZIP=%HASH_ZIP:~0,8%
+for /f %%i in ('echo %URL_TAR%^| certutil -hashstring -stdin SHA256 ^| findstr /v "hash CertUtil"') do set "HASH_TAR=%%i"
+set HASH_TAR=%HASH_TAR:~0,8%
+for /f %%i in ('echo %URL_NESTED_ZIP%^| certutil -hashstring -stdin SHA256 ^| findstr /v "hash CertUtil"') do set "HASH_NESTED_ZIP=%%i"
+set HASH_NESTED_ZIP=%HASH_NESTED_ZIP:~0,8%
+for /f %%i in ('echo %URL_NESTED_TAR%^| certutil -hashstring -stdin SHA256 ^| findstr /v "hash CertUtil"') do set "HASH_NESTED_TAR=%%i"
+set HASH_NESTED_TAR=%HASH_NESTED_TAR:~0,8%
 
 if exist "%TEMP_CACHE%" rmdir /s /q "%TEMP_CACHE%"
 echo Using temp cache dir: %TEMP_CACHE%
@@ -21,7 +43,6 @@ REM Determine which binary to use
 if not "%DTX_BIN%"=="" (
     echo Using provided DTX_BIN: %DTX_BIN%
 ) else (
-    if "%DTX_VERSION%"=="" set DTX_VERSION=dev
     if "%DTX_VERSION%"=="release" (
         echo Building release version...
         cargo build --release
@@ -43,13 +64,15 @@ if not "%DTX_BIN%"=="" (
 )
 
 echo Testing direct binary download...
-%DTX_BIN% https://github.com/DiscreteTom/dtx-test-fixture/releases/download/v0.1.1/dtx-test-fixture-windows-%DTX_ARCH%.exe -- --version 2>&1 | findstr /C:"dtx-test-fixture 0.1.1" >nul
+set URL=%URL_DIRECT%
+set HASH=%HASH_DIRECT%
+%DTX_BIN% %URL% -- --version 2>&1 | findstr /C:"dtx-test-fixture %FIXTURE_VERSION:~1%" >nul
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Version output incorrect
     exit /b 1
 )
 echo Checking cache...
-if not exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\2c5f1687\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
+if not exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\%HASH%\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
     echo ERROR: Binary not found in cache
     exit /b 1
 )
@@ -57,17 +80,19 @@ echo √ Test passed
 echo.
 
 echo Testing zip archive...
-%DTX_BIN% https://github.com/DiscreteTom/dtx-test-fixture/releases/download/v0.1.1/dtx-test-fixture-windows-%DTX_ARCH%.exe.zip -e dtx-test-fixture-windows-%DTX_ARCH%.exe -- --version 2>&1 | findstr /C:"dtx-test-fixture 0.1.1" >nul
+set URL=%URL_ZIP%
+set HASH=%HASH_ZIP%
+%DTX_BIN% %URL% -e dtx-test-fixture-windows-%DTX_ARCH%.exe -- --version 2>&1 | findstr /C:"dtx-test-fixture %FIXTURE_VERSION:~1%" >nul
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Version output incorrect
     exit /b 1
 )
 echo Checking cache...
-if not exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\75ed4879\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
+if not exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\%HASH%\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
     echo ERROR: Binary not found in cache
     exit /b 1
 )
-if exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\75ed4879\dtx-test-fixture-windows-%DTX_ARCH%.exe.zip" (
+if exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\%HASH%\dtx-test-fixture-windows-%DTX_ARCH%.exe.zip" (
     echo ERROR: Archive file should not be in cache
     exit /b 1
 )
@@ -75,17 +100,19 @@ echo √ Test passed
 echo.
 
 echo Testing tar.gz archive...
-%DTX_BIN% https://github.com/DiscreteTom/dtx-test-fixture/releases/download/v0.1.1/dtx-test-fixture-windows-%DTX_ARCH%.exe.tar.gz -e dtx-test-fixture-windows-%DTX_ARCH%.exe -- --version 2>&1 | findstr /C:"dtx-test-fixture 0.1.1" >nul
+set URL=%URL_TAR%
+set HASH=%HASH_TAR%
+%DTX_BIN% %URL% -e dtx-test-fixture-windows-%DTX_ARCH%.exe -- --version 2>&1 | findstr /C:"dtx-test-fixture %FIXTURE_VERSION:~1%" >nul
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Version output incorrect
     exit /b 1
 )
 echo Checking cache...
-if not exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\f5a74e81\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
+if not exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\%HASH%\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
     echo ERROR: Binary not found in cache
     exit /b 1
 )
-if exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\f5a74e81\dtx-test-fixture-windows-%DTX_ARCH%.exe.tar.gz" (
+if exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\%HASH%\dtx-test-fixture-windows-%DTX_ARCH%.exe.tar.gz" (
     echo ERROR: Archive file should not be in cache
     exit /b 1
 )
@@ -93,17 +120,19 @@ echo √ Test passed
 echo.
 
 echo Testing nested zip archive...
-%DTX_BIN% https://github.com/DiscreteTom/dtx-test-fixture/releases/download/v0.1.1/dtx-test-fixture-windows-%DTX_ARCH%.exe-nested.zip -e bin/dtx-test-fixture-windows-%DTX_ARCH%.exe -- --version 2>&1 | findstr /C:"dtx-test-fixture 0.1.1" >nul
+set URL=%URL_NESTED_ZIP%
+set HASH=%HASH_NESTED_ZIP%
+%DTX_BIN% %URL% -e bin/dtx-test-fixture-windows-%DTX_ARCH%.exe -- --version 2>&1 | findstr /C:"dtx-test-fixture %FIXTURE_VERSION:~1%" >nul
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Version output incorrect
     exit /b 1
 )
 echo Checking cache...
-if not exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\c8f7e1ac\bin\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
+if not exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\%HASH%\bin\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
     echo ERROR: Binary not found in cache
     exit /b 1
 )
-if exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\c8f7e1ac\dtx-test-fixture-windows-%DTX_ARCH%.exe-nested.zip" (
+if exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\%HASH%\dtx-test-fixture-windows-%DTX_ARCH%.exe-nested.zip" (
     echo ERROR: Archive file should not be in cache
     exit /b 1
 )
@@ -111,17 +140,19 @@ echo √ Test passed
 echo.
 
 echo Testing nested tar.gz archive...
-%DTX_BIN% https://github.com/DiscreteTom/dtx-test-fixture/releases/download/v0.1.1/dtx-test-fixture-windows-%DTX_ARCH%.exe-nested.tar.gz -e bin/dtx-test-fixture-windows-%DTX_ARCH%.exe -- --version 2>&1 | findstr /C:"dtx-test-fixture 0.1.1" >nul
+set URL=%URL_NESTED_TAR%
+set HASH=%HASH_NESTED_TAR%
+%DTX_BIN% %URL% -e bin/dtx-test-fixture-windows-%DTX_ARCH%.exe -- --version 2>&1 | findstr /C:"dtx-test-fixture %FIXTURE_VERSION:~1%" >nul
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Version output incorrect
     exit /b 1
 )
 echo Checking cache...
-if not exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\4e9f06d2\bin\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
+if not exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\%HASH%\bin\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
     echo ERROR: Binary not found in cache
     exit /b 1
 )
-if exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\4e9f06d2\dtx-test-fixture-windows-%DTX_ARCH%.exe-nested.tar.gz" (
+if exist "%TEMP_CACHE%\dtx-test-fixture-windows-%DTX_ARCH%.exe\%HASH%\dtx-test-fixture-windows-%DTX_ARCH%.exe-nested.tar.gz" (
     echo ERROR: Archive file should not be in cache
     exit /b 1
 )
@@ -129,13 +160,15 @@ echo √ Test passed
 echo.
 
 echo Testing --name parameter...
-%DTX_BIN% https://github.com/DiscreteTom/dtx-test-fixture/releases/download/v0.1.1/dtx-test-fixture-windows-%DTX_ARCH%.exe -n my-custom-name -- --version 2>&1 | findstr /C:"dtx-test-fixture 0.1.1" >nul
+set URL=%URL_DIRECT%
+set HASH=%HASH_DIRECT%
+%DTX_BIN% %URL% -n my-custom-name -- --version 2>&1 | findstr /C:"dtx-test-fixture %FIXTURE_VERSION:~1%" >nul
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Version output incorrect
     exit /b 1
 )
 echo Checking cache...
-if not exist "%TEMP_CACHE%\my-custom-name\2c5f1687\my-custom-name.exe" (
+if not exist "%TEMP_CACHE%\my-custom-name\%HASH%\my-custom-name.exe" (
     echo ERROR: Binary not found with custom name in cache
     exit /b 1
 )
@@ -143,17 +176,19 @@ echo √ Test passed
 echo.
 
 echo Testing --name parameter with zip...
-%DTX_BIN% https://github.com/DiscreteTom/dtx-test-fixture/releases/download/v0.1.1/dtx-test-fixture-windows-%DTX_ARCH%.exe.zip -n my-zip-name -e dtx-test-fixture-windows-%DTX_ARCH%.exe -- --version 2>&1 | findstr /C:"dtx-test-fixture 0.1.1" >nul
+set URL=%URL_ZIP%
+set HASH=%HASH_ZIP%
+%DTX_BIN% %URL% -n my-zip-name -e dtx-test-fixture-windows-%DTX_ARCH%.exe -- --version 2>&1 | findstr /C:"dtx-test-fixture %FIXTURE_VERSION:~1%" >nul
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Version output incorrect
     exit /b 1
 )
 echo Checking cache...
-if not exist "%TEMP_CACHE%\my-zip-name\75ed4879\my-zip-name.exe" (
+if not exist "%TEMP_CACHE%\my-zip-name\%HASH%\my-zip-name.exe" (
     echo ERROR: Binary not found with custom name in cache
     exit /b 1
 )
-if exist "%TEMP_CACHE%\my-zip-name\75ed4879\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
+if exist "%TEMP_CACHE%\my-zip-name\%HASH%\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
     echo ERROR: Original entry name should not exist
     exit /b 1
 )
@@ -161,17 +196,19 @@ echo √ Test passed
 echo.
 
 echo Testing --name parameter with tar.gz...
-%DTX_BIN% https://github.com/DiscreteTom/dtx-test-fixture/releases/download/v0.1.1/dtx-test-fixture-windows-%DTX_ARCH%.exe.tar.gz -n my-tar-name -e dtx-test-fixture-windows-%DTX_ARCH%.exe -- --version 2>&1 | findstr /C:"dtx-test-fixture 0.1.1" >nul
+set URL=%URL_TAR%
+set HASH=%HASH_TAR%
+%DTX_BIN% %URL% -n my-tar-name -e dtx-test-fixture-windows-%DTX_ARCH%.exe -- --version 2>&1 | findstr /C:"dtx-test-fixture %FIXTURE_VERSION:~1%" >nul
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Version output incorrect
     exit /b 1
 )
 echo Checking cache...
-if not exist "%TEMP_CACHE%\my-tar-name\f5a74e81\my-tar-name.exe" (
+if not exist "%TEMP_CACHE%\my-tar-name\%HASH%\my-tar-name.exe" (
     echo ERROR: Binary not found with custom name in cache
     exit /b 1
 )
-if exist "%TEMP_CACHE%\my-tar-name\f5a74e81\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
+if exist "%TEMP_CACHE%\my-tar-name\%HASH%\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
     echo ERROR: Original entry name should not exist
     exit /b 1
 )
@@ -179,17 +216,19 @@ echo √ Test passed
 echo.
 
 echo Testing --name parameter with nested zip...
-%DTX_BIN% https://github.com/DiscreteTom/dtx-test-fixture/releases/download/v0.1.1/dtx-test-fixture-windows-%DTX_ARCH%.exe-nested.zip -n my-nested-zip -e bin/dtx-test-fixture-windows-%DTX_ARCH%.exe -- --version 2>&1 | findstr /C:"dtx-test-fixture 0.1.1" >nul
+set URL=%URL_NESTED_ZIP%
+set HASH=%HASH_NESTED_ZIP%
+%DTX_BIN% %URL% -n my-nested-zip -e bin/dtx-test-fixture-windows-%DTX_ARCH%.exe -- --version 2>&1 | findstr /C:"dtx-test-fixture %FIXTURE_VERSION:~1%" >nul
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Version output incorrect
     exit /b 1
 )
 echo Checking cache...
-if not exist "%TEMP_CACHE%\my-nested-zip\c8f7e1ac\bin\my-nested-zip.exe" (
+if not exist "%TEMP_CACHE%\my-nested-zip\%HASH%\bin\my-nested-zip.exe" (
     echo ERROR: Binary not found with custom name in cache
     exit /b 1
 )
-if exist "%TEMP_CACHE%\my-nested-zip\c8f7e1ac\bin\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
+if exist "%TEMP_CACHE%\my-nested-zip\%HASH%\bin\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
     echo ERROR: Original entry name should not exist
     exit /b 1
 )
@@ -197,17 +236,19 @@ echo √ Test passed
 echo.
 
 echo Testing --name parameter with nested tar.gz...
-%DTX_BIN% https://github.com/DiscreteTom/dtx-test-fixture/releases/download/v0.1.1/dtx-test-fixture-windows-%DTX_ARCH%.exe-nested.tar.gz -n my-nested-tar -e bin/dtx-test-fixture-windows-%DTX_ARCH%.exe -- --version 2>&1 | findstr /C:"dtx-test-fixture 0.1.1" >nul
+set URL=%URL_NESTED_TAR%
+set HASH=%HASH_NESTED_TAR%
+%DTX_BIN% %URL% -n my-nested-tar -e bin/dtx-test-fixture-windows-%DTX_ARCH%.exe -- --version 2>&1 | findstr /C:"dtx-test-fixture %FIXTURE_VERSION:~1%" >nul
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Version output incorrect
     exit /b 1
 )
 echo Checking cache...
-if not exist "%TEMP_CACHE%\my-nested-tar\4e9f06d2\bin\my-nested-tar.exe" (
+if not exist "%TEMP_CACHE%\my-nested-tar\%HASH%\bin\my-nested-tar.exe" (
     echo ERROR: Binary not found with custom name in cache
     exit /b 1
 )
-if exist "%TEMP_CACHE%\my-nested-tar\4e9f06d2\bin\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
+if exist "%TEMP_CACHE%\my-nested-tar\%HASH%\bin\dtx-test-fixture-windows-%DTX_ARCH%.exe" (
     echo ERROR: Original entry name should not exist
     exit /b 1
 )
