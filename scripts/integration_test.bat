@@ -50,13 +50,14 @@ if not "%DTX_BIN%"=="" (
         echo Testing with debug build: %DTX_BIN%
     ) else (
         echo Downloading version %DTX_VERSION% for %DTX_ARCH%...
-        curl -L -o dtx.zip "https://github.com/DiscreteTom/dtx/releases/download/%DTX_VERSION%/dtx-windows-%DTX_ARCH%.exe.zip"
+        set TARGET=%DTX_ARCH%-pc-windows-msvc
+        curl -L -o dtx.zip "https://github.com/DiscreteTom/dtx/releases/download/%DTX_VERSION%/dtx-%DTX_VERSION%-!TARGET!.zip"
         tar -xf dtx.zip
         if not exist target\debug mkdir target\debug
         move dtx.exe target\debug\dtx.exe
         del dtx.zip
         set "DTX_BIN=target\debug\dtx.exe"
-        echo Testing with downloaded version: %DTX_VERSION% (%DTX_ARCH%)
+        echo Testing with downloaded version: %DTX_VERSION% (!TARGET!)
     )
 )
 

@@ -14,32 +14,26 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             artifact_name: dtx
-            asset_name: dtx-linux-x86_64
             test_script: bash scripts/integration_test.sh
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             artifact_name: dtx
-            asset_name: dtx-linux-x86_64-musl
             test_script: bash scripts/integration_test.sh
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             artifact_name: dtx
-            asset_name: dtx-linux-aarch64
             test_script: ""
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
             artifact_name: dtx
-            asset_name: dtx-linux-aarch64-musl
             test_script: ""
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             artifact_name: dtx.exe
-            asset_name: dtx-windows-x86_64.exe
             test_script: scripts/integration_test.bat
           - os: windows-latest
             target: aarch64-pc-windows-msvc
             artifact_name: dtx.exe
-            asset_name: dtx-windows-aarch64.exe
             test_script: ""
 
     steps:
@@ -81,19 +75,19 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           cd target/${{ matrix.target }}/release
-          tar czf ${{ matrix.asset_name }}.tar.gz ${{ matrix.artifact_name }}
+          tar czf dtx-${{ github.ref_name }}-${{ matrix.target }}.tar.gz ${{ matrix.artifact_name }}
       
       - name: Package Windows binary
         if: matrix.os == 'windows-latest'
         run: |
           cd target/${{ matrix.target }}/release
-          7z a ${{ matrix.asset_name }}.zip ${{ matrix.artifact_name }}
+          7z a dtx-${{ github.ref_name }}-${{ matrix.target }}.zip ${{ matrix.artifact_name }}
       
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.asset_name }}
-          path: target/${{ matrix.target }}/release/${{ matrix.asset_name }}.*
+          name: dtx-${{ github.ref_name }}-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/dtx-${{ github.ref_name }}-${{ matrix.target }}.*
 
   release:
     needs: build
