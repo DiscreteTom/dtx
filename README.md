@@ -31,6 +31,8 @@ cp target/release/dtx /usr/local/bin/dtx
 
 </details>
 
+## Usage
+
 ### Full CLI Usage
 
 <details>
@@ -78,14 +80,20 @@ For `.tar.gz` files:
 dtx https://example.com/tool.tar.gz --entry tool/bin/tool -- --version
 ```
 
-## Use with Binary MCP Servers
+### Use with Binary MCP Servers
 
 ```json
 {
   "mcpServers": {
     "server": {
       "command": "dtx",
-      "args": ["https://example.com/mcp.tar.gz", "--entry", "bin/server"]
+      "args": [
+        "https://example.com/mcp.tar.gz",
+        "--entry",
+        "bin/server",
+        "--",
+        "params"
+      ]
     }
   }
 }
