@@ -4,8 +4,10 @@ A cross-platform universal tool runner that downloads and caches binaries from U
 
 ## Installation
 
+### Linux/macOS
+
 ```bash
-cargo install --path .
+curl -LsSf https://raw.githubusercontent.com/DiscreteTom/dtx/main/scripts/install.sh | sh
 ```
 
 ### Full CLI Usage
