@@ -18,7 +18,16 @@ detect_platform() {
     case "$OS" in
         linux)
             OS="linux"
-            if ! command -v gcc >/dev/null 2>&1; then
+            # Check if glibc version is too old or not available
+            if command -v ldd >/dev/null 2>&1; then
+                GLIBC_VERSION=$(ldd --version 2>&1 | head -n1 | grep -oE '[0-9]+\.[0-9]+' | head -n1)
+                GLIBC_MAJOR=$(echo "$GLIBC_VERSION" | cut -d. -f1)
+                GLIBC_MINOR=$(echo "$GLIBC_VERSION" | cut -d. -f2)
+                # Require glibc 2.38 or higher
+                if [ "$GLIBC_MAJOR" -lt 2 ] || { [ "$GLIBC_MAJOR" -eq 2 ] && [ "$GLIBC_MINOR" -lt 38 ]; }; then
+                    LIBC="-musl"
+                fi
+            else
                 LIBC="-musl"
             fi
             ;;
