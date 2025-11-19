@@ -57,7 +57,14 @@ jobs:
         if: contains(matrix.target, 'aarch64') && matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
+          if [[ "${{ matrix.target }}" == *"musl"* ]]; then
+            sudo apt-get install -y musl-tools
+            wget https://musl.cc/aarch64-linux-musl-cross.tgz
+            tar xf aarch64-linux-musl-cross.tgz
+            echo "$PWD/aarch64-linux-musl-cross/bin" >> $GITHUB_PATH
+          else
+            sudo apt-get install -y gcc-aarch64-linux-gnu
+          fi
       
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
