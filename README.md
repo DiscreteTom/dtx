@@ -54,6 +54,7 @@ Options:
   -f, --force                  Force refresh cache, re-download even if cached
       --cache-dir <CACHE_DIR>  Cache directory path [env: DTX_CACHE_DIR=] [default: ~/.dtx/cache]
   -h, --help                   Print help
+  -V, --version                Print version
 ```
 
 </details>
