@@ -8,13 +8,13 @@ pub fn get_binary_path(
     name: &str,
     entry: Option<&str>,
     cache_dir: &std::path::Path,
-) -> Result<PathBuf, Box<dyn std::error::Error>> {
+) -> Result<(PathBuf, PathBuf), Box<dyn std::error::Error>> {
     let url_hash = format!("{:x}", Sha256::digest(url.as_bytes()))[..8].to_string();
     let base_dir = cache_dir.join(name).join(&url_hash);
 
     if is_archive(url) {
         if let Some(entry_path) = entry {
-            Ok(base_dir.join(entry_path))
+            Ok((base_dir.join(entry_path), base_dir))
         } else {
             Err("Archive URL requires --entry parameter".into())
         }
@@ -24,7 +24,7 @@ pub fn get_binary_path(
         } else {
             name.to_string()
         };
-        Ok(base_dir.join(executable_name))
+        Ok((base_dir.join(executable_name), base_dir))
     }
 }
 
@@ -33,20 +33,14 @@ fn is_archive(url: &str) -> bool {
     url_lower.ends_with(".zip") || url_lower.ends_with(".tar.gz") || url_lower.ends_with(".tgz")
 }
 
-fn get_archive_extraction_dir(binary_path: &PathBuf) -> &std::path::Path {
-    binary_path.parent().unwrap().parent().unwrap()
-}
-
 pub fn ensure_binary(
     url: &str,
     binary_path: &PathBuf,
+    base_dir: &PathBuf,
     force: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let binary_dir = binary_path.parent().unwrap();
-
     if is_archive(url) {
-        let archive_dir = get_archive_extraction_dir(binary_path);
-        fs::create_dir_all(archive_dir)?;
+        fs::create_dir_all(base_dir)?;
         debug!("Archive binary path: {:?}", binary_path);
 
         if !binary_path.exists() || force {
@@ -55,11 +49,11 @@ pub fn ensure_binary(
             let bytes = response.bytes()?;
 
             if url.to_lowercase().ends_with(".zip") {
-                extract_zip(&bytes, archive_dir)?;
+                extract_zip(&bytes, base_dir)?;
             } else if url.to_lowercase().ends_with(".tar.gz")
                 || url.to_lowercase().ends_with(".tgz")
             {
-                extract_tar_gz(&bytes, archive_dir)?;
+                extract_tar_gz(&bytes, base_dir)?;
             }
 
             debug!("Extracted archive");
@@ -74,7 +68,7 @@ pub fn ensure_binary(
             debug!("Using cached archive");
         }
     } else {
-        fs::create_dir_all(binary_dir)?;
+        fs::create_dir_all(base_dir)?;
         debug!("Binary path: {:?}", binary_path);
 
         if !binary_path.exists() || force {
@@ -116,6 +110,14 @@ fn extract_zip(
             }
             let mut outfile = fs::File::create(&outpath)?;
             std::io::copy(&mut file, &mut outfile)?;
+
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                if let Some(mode) = file.unix_mode() {
+                    fs::set_permissions(&outpath, fs::Permissions::from_mode(mode))?;
+                }
+            }
         }
     }
     Ok(())
@@ -149,7 +151,7 @@ mod tests {
     #[test]
     fn test_get_binary_path_regular() {
         use std::path::Path;
-        let path = get_binary_path("https://example.com/tool", "mytool", None, Path::new("~/.dtx/cache")).unwrap();
+        let (path, _) = get_binary_path("https://example.com/tool", "mytool", None, Path::new("~/.dtx/cache")).unwrap();
         assert!(path.to_string_lossy().contains("mytool"));
         assert!(path.to_string_lossy().contains(".dtx/cache"));
     }
@@ -157,8 +159,9 @@ mod tests {
     #[test]
     fn test_get_binary_path_archive_with_entry() {
         use std::path::Path;
-        let path = get_binary_path("https://example.com/tool.zip", "mytool", Some("bin/app"), Path::new("~/.dtx/cache")).unwrap();
+        let (path, base) = get_binary_path("https://example.com/tool.zip", "mytool", Some("bin/app"), Path::new("~/.dtx/cache")).unwrap();
         assert!(path.to_string_lossy().ends_with("bin/app"));
+        assert!(base.to_string_lossy().contains("mytool"));
     }
 
     #[test]
@@ -175,7 +178,7 @@ mod tests {
         let temp_dir = env::temp_dir().join("dtx_test");
         let binary_path = temp_dir.join("test_binary");
         
-        let result = ensure_binary("invalid://url", &binary_path, false);
+        let result = ensure_binary("invalid://url", &binary_path, &temp_dir, false);
         assert!(result.is_err());
     }
 
@@ -183,15 +186,7 @@ mod tests {
     fn test_custom_cache_dir() {
         use std::path::Path;
         let custom_cache = Path::new("/tmp/custom_dtx");
-        let path = get_binary_path("https://example.com/tool", "mytool", None, custom_cache).unwrap();
+        let (path, _) = get_binary_path("https://example.com/tool", "mytool", None, custom_cache).unwrap();
         assert!(path.to_string_lossy().contains("/tmp/custom_dtx"));
-    }
-
-    #[test]
-    fn test_get_archive_extraction_dir() {
-        use std::path::PathBuf;
-        let binary_path = PathBuf::from("/cache/tool/hash/archive/binary");
-        let extraction_dir = get_archive_extraction_dir(&binary_path);
-        assert_eq!(extraction_dir, std::path::Path::new("/cache/tool/hash"));
     }
 }

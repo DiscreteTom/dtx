@@ -32,6 +32,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
     let args = Args::parse();
 
+    let cache_dir = if args.cache_dir.starts_with("~") {
+        if let Some(home) = dirs::home_dir() {
+            home.join(args.cache_dir.strip_prefix("~/").unwrap_or(args.cache_dir.as_path()))
+        } else {
+            args.cache_dir
+        }
+    } else {
+        args.cache_dir
+    };
+
     let binary_name = if let Some(name) = args.name.as_deref() {
         name
     } else if let Some(entry) = args.entry.as_deref() {
@@ -40,9 +50,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         utils::extract_binary_name_from_url(&args.url)
     };
 
-    let binary_path = cache::get_binary_path(&args.url, binary_name, args.entry.as_deref(), &args.cache_dir)?;
+    let (binary_path, base_dir) = cache::get_binary_path(&args.url, binary_name, args.entry.as_deref(), &cache_dir)?;
 
-    cache::ensure_binary(&args.url, &binary_path, args.force)?;
+    cache::ensure_binary(&args.url, &binary_path, &base_dir, args.force)?;
 
     let exit_code = executor::execute_binary(&binary_path, &args.app_args)?;
     std::process::exit(exit_code);
