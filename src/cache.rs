@@ -14,12 +14,23 @@ pub fn get_binary_path(
 
     if is_archive(url) {
         if let Some(entry_path) = entry {
+            // For archives, preserve the directory structure from entry path
+            // but replace the filename with the custom name
+            let entry_pathbuf = std::path::Path::new(entry_path);
+            let parent_dir = entry_pathbuf.parent();
             let executable_name = if cfg!(windows) {
                 format!("{}.exe", name)
             } else {
                 name.to_string()
             };
-            Ok((base_dir.join(&executable_name), base_dir, Some(entry_path.to_string())))
+            
+            let final_path = if let Some(parent) = parent_dir {
+                base_dir.join(parent).join(&executable_name)
+            } else {
+                base_dir.join(&executable_name)
+            };
+            
+            Ok((final_path, base_dir, Some(entry_path.to_string())))
         } else {
             Err("Archive URL requires --entry parameter".into())
         }
@@ -176,7 +187,7 @@ mod tests {
     fn test_get_binary_path_archive_with_entry() {
         use std::path::Path;
         let (path, base, entry) = get_binary_path("https://example.com/tool.zip", "mytool", Some("bin/app"), Path::new("~/.dtx/cache")).unwrap();
-        assert!(path.to_string_lossy().ends_with("mytool"));
+        assert!(path.to_string_lossy().ends_with("bin/mytool") || path.to_string_lossy().ends_with("bin\\mytool"));
         assert!(base.to_string_lossy().contains("mytool"));
         assert_eq!(entry, Some("bin/app".to_string()));
     }
