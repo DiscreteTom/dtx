@@ -2,6 +2,11 @@ name: Integration Tests
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to test (dev/release/v1.0.0)'
+        required: false
+        default: 'dev'
 
 jobs:
   test-linux:
@@ -13,6 +18,8 @@ jobs:
       
       - name: Run Linux integration tests
         run: bash scripts/integration_test.sh
+        env:
+          DTX_VERSION: ${{ inputs.version }}
 
   test-windows:
     runs-on: windows-latest
@@ -23,3 +30,5 @@ jobs:
       
       - name: Run Windows integration tests
         run: scripts/integration_test.bat
+        env:
+          DTX_VERSION: ${{ inputs.version }}
