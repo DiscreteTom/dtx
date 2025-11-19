@@ -1,4 +1,12 @@
 @echo off
+REM Integration test script for dtx
+REM
+REM Usage:
+REM   scripts\integration_test.bat                                    - Build and test debug version
+REM   set DTX_VERSION=release && scripts\integration_test.bat         - Build and test release version
+REM   set DTX_VERSION=v1.0.0 && scripts\integration_test.bat          - Download and test specific version
+REM   set DTX_BIN=target\release\dtx.exe && scripts\integration_test.bat  - Test specific binary
+
 setlocal enabledelayedexpansion
 
 set TEMP_CACHE=%TEMP%\dtx_test_cache
@@ -7,25 +15,29 @@ set DTX_CACHE_DIR=%TEMP_CACHE%
 if exist "%TEMP_CACHE%" rmdir /s /q "%TEMP_CACHE%"
 echo Using temp cache dir: %TEMP_CACHE%
 
-REM Determine which binary to use based on DTX_VERSION
-if "%DTX_VERSION%"=="" set DTX_VERSION=dev
-if "%DTX_VERSION%"=="release" (
-    echo Building release version...
-    cargo build --release
-    set "DTX_BIN=cargo run --release --"
-    echo Testing with release build
-) else if "%DTX_VERSION%"=="dev" (
-    echo Building debug version...
-    cargo build
-    set "DTX_BIN=cargo run --"
-    echo Testing with debug build
+REM Determine which binary to use
+if not "%DTX_BIN%"=="" (
+    echo Using provided DTX_BIN: %DTX_BIN%
 ) else (
-    echo Downloading version %DTX_VERSION%...
-    curl -L -o dtx.exe "https://github.com/DiscreteTom/dtx/releases/download/%DTX_VERSION%/dtx-windows-x86_64.exe"
-    if not exist target\debug mkdir target\debug
-    move dtx.exe target\debug\dtx.exe
-    set "DTX_BIN=target\debug\dtx.exe"
-    echo Testing with downloaded version: %DTX_VERSION%
+    if "%DTX_VERSION%"=="" set DTX_VERSION=dev
+    if "%DTX_VERSION%"=="release" (
+        echo Building release version...
+        cargo build --release
+        set "DTX_BIN=target\release\dtx.exe"
+        echo Testing with release build: %DTX_BIN%
+    ) else if "%DTX_VERSION%"=="dev" (
+        echo Building debug version...
+        cargo build
+        set "DTX_BIN=target\debug\dtx.exe"
+        echo Testing with debug build: %DTX_BIN%
+    ) else (
+        echo Downloading version %DTX_VERSION%...
+        curl -L -o dtx.exe "https://github.com/DiscreteTom/dtx/releases/download/%DTX_VERSION%/dtx-windows-x86_64.exe"
+        if not exist target\debug mkdir target\debug
+        move dtx.exe target\debug\dtx.exe
+        set "DTX_BIN=target\debug\dtx.exe"
+        echo Testing with downloaded version: %DTX_VERSION%
+    )
 )
 
 echo Testing direct binary download...

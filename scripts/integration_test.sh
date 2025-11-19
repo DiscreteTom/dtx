@@ -1,4 +1,12 @@
 #!/bin/bash
+# Integration test script for dtx
+#
+# Usage:
+#   bash scripts/integration_test.sh                          # Build and test debug version
+#   DTX_VERSION=release bash scripts/integration_test.sh      # Build and test release version
+#   DTX_VERSION=v1.0.0 bash scripts/integration_test.sh       # Download and test specific version
+#   DTX_BIN=./target/release/dtx bash scripts/integration_test.sh  # Test specific binary
+
 set -e
 
 TEMP_CACHE="/tmp/dtx_test_cache"
@@ -7,26 +15,30 @@ export DTX_CACHE_DIR="$TEMP_CACHE"
 rm -rf "$TEMP_CACHE"
 echo "Using temp cache dir: $TEMP_CACHE"
 
-# Determine which binary to use based on DTX_VERSION
-VERSION="${DTX_VERSION:-dev}"
-if [ "$VERSION" = "release" ]; then
-    echo "Building release version..."
-    cargo build --release
-    DTX_BIN="cargo run --release --"
-    echo "Testing with release build"
-elif [ "$VERSION" = "dev" ]; then
-    echo "Building debug version..."
-    cargo build
-    DTX_BIN="cargo run --"
-    echo "Testing with debug build"
+# Determine which binary to use
+if [ -n "$DTX_BIN" ]; then
+    echo "Using provided DTX_BIN: $DTX_BIN"
 else
-    echo "Downloading version $VERSION..."
-    curl -L -o dtx "https://github.com/DiscreteTom/dtx/releases/download/$VERSION/dtx-linux-x86_64"
-    chmod +x dtx
-    mkdir -p target/debug
-    mv dtx target/debug/dtx
-    DTX_BIN="./target/debug/dtx"
-    echo "Testing with downloaded version: $VERSION"
+    VERSION="${DTX_VERSION:-dev}"
+    if [ "$VERSION" = "release" ]; then
+        echo "Building release version..."
+        cargo build --release
+        DTX_BIN="./target/release/dtx"
+        echo "Testing with release build: $DTX_BIN"
+    elif [ "$VERSION" = "dev" ]; then
+        echo "Building debug version..."
+        cargo build
+        DTX_BIN="./target/debug/dtx"
+        echo "Testing with debug build: $DTX_BIN"
+    else
+        echo "Downloading version $VERSION..."
+        curl -L -o dtx "https://github.com/DiscreteTom/dtx/releases/download/$VERSION/dtx-linux-x86_64"
+        chmod +x dtx
+        mkdir -p target/debug
+        mv dtx target/debug/dtx
+        DTX_BIN="./target/debug/dtx"
+        echo "Testing with downloaded version: $VERSION"
+    fi
 fi
 
 echo "Testing direct binary download..."

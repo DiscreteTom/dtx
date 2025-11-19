@@ -15,18 +15,22 @@ jobs:
             target: x86_64-unknown-linux-gnu
             artifact_name: dtx
             asset_name: dtx-linux-x86_64
+            test_script: bash scripts/integration_test.sh
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             artifact_name: dtx
             asset_name: dtx-linux-x86_64-musl
+            test_script: bash scripts/integration_test.sh
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             artifact_name: dtx.exe
             asset_name: dtx-windows-x86_64.exe
+            test_script: scripts/integration_test.bat
           - os: windows-latest
             target: x86_64-pc-windows-gnu
             artifact_name: dtx.exe
             asset_name: dtx-windows-x86_64-gnu.exe
+            test_script: scripts/integration_test.bat
 
     steps:
       - uses: actions/checkout@v4
@@ -41,6 +45,11 @@ jobs:
       
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
+      
+      - name: Run integration tests
+        run: ${{ matrix.test_script }}
+        env:
+          DTX_BIN: target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
       
       - name: Upload artifact
         uses: actions/upload-artifact@v4
