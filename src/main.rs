@@ -8,6 +8,7 @@ use std::path::PathBuf;
 #[derive(Parser)]
 #[command(name = "dtx")]
 #[command(about = "Direct tool executor")]
+#[command(version)]
 struct Args {
     /// URL to the binary to download and execute
     url: String,
