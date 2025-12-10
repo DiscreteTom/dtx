@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Platform-specific URL options: `--linux-url`, `--macos-url`, `--windows-url`
+- Platform-specific name options: `--linux-name`, `--macos-name`, `--windows-name`
+- Platform-specific entry point options: `--linux-entry`, `--macos-entry`, `--windows-entry`
+- Platform-specific argument options: `--linux-args`, `--macos-args`, `--windows-args`
+- CLI definition and parsing logic modularization to `src/cli.rs`
+- `Resolved` structure to simplify return values
+- Maintained dtx syntax compatibility with original format
+- Complete CLI parsing tests
+
 ## [0.1.1] - 2025-11-19
 
 ### Added
